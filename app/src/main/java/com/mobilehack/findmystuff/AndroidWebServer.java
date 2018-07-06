@@ -1,5 +1,8 @@
 package com.mobilehack.findmystuff;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.util.Map;
 
 import fi.iki.elonen.NanoHTTPD;
@@ -19,12 +22,23 @@ public class AndroidWebServer extends NanoHTTPD {
 
         String msg = "";
         Map<String, String> parms = session.getParms();
+
+
         if (parms.get("message") != null) {
             msg += "Got the message";
         } else {
             msg += "Didn't get message";
         }
-        return newFixedLengthResponse(msg);
+
+        JSONObject jsonObj = new JSONObject();
+
+        try {
+            jsonObj.put("message", msg);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        return newFixedLengthResponse(jsonObj.toString());
     }
 
 

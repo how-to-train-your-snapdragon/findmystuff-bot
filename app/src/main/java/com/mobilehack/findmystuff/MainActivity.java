@@ -19,7 +19,7 @@ import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
 
-    int port = 8080;
+    int port = 8881;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,10 +45,12 @@ public class MainActivity extends AppCompatActivity {
                     } catch (IOException e) {
                         e.printStackTrace();
                         textView.setText(e.getMessage());
+                        textView.setText(R.string.serverNotRunning_txt);
 
                     }
                 }else{
                     androidWebServer.stop();
+                    textView.setText(R.string.serverNotRunning_txt);
                     button.setText(getText(R.string.start_server));
                 }
 
