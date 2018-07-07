@@ -4,13 +4,21 @@ import android.arch.lifecycle.Lifecycle;
 import android.arch.lifecycle.LifecycleObserver;
 import android.arch.lifecycle.OnLifecycleEvent;
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.util.Log;
+import android.widget.ImageView;
+import android.widget.Toast;
 
+
+import com.mobilehack.findmystuff.MainActivity;
 
 import io.fotoapparat.Fotoapparat;
 import io.fotoapparat.parameter.Resolution;
 import io.fotoapparat.parameter.ScaleType;
 import io.fotoapparat.preview.Frame;
+import io.fotoapparat.result.BitmapPhoto;
+import io.fotoapparat.result.PendingResult;
+import io.fotoapparat.result.WhenDoneListener;
 import io.fotoapparat.view.CameraView;
 
 import static io.fotoapparat.log.LoggersKt.logcat;
@@ -54,8 +62,25 @@ public class CameraPreviewHelper implements LifecycleObserver {
 
     @OnLifecycleEvent(Lifecycle.Event.ON_RESUME)
     private void startPreview() {
-       // Log.e(MainActivity.LOGTAG, "Start camera");
+        // Log.e(MainActivity.LOGTAG, "Start camera");
         mCamera.start();
+    }
+
+    public void setBitMap(ImageView screenshotView, BitMapInterface bitMapInterface) {
+
+        PendingResult<BitmapPhoto> bitmapPendingResult = mCamera.takePicture().toBitmap();
+        bitmapPendingResult.whenDone(new WhenDoneListener<BitmapPhoto>() {
+            @Override
+            public void whenDone(BitmapPhoto bitmapPhoto) {
+
+                Bitmap bitmap = bitmapPhoto.bitmap;
+                screenshotView.setImageBitmap(bitmapPhoto.bitmap);
+                screenshotView.setRotation(-bitmapPhoto.rotationDegrees);
+                bitMapInterface.gotBitMap(bitmap);
+
+            }
+        });
+
     }
 
 
@@ -63,5 +88,10 @@ public class CameraPreviewHelper implements LifecycleObserver {
     private void stopPreview() {
         //Log.e(MainActivity.LOGTAG, "Stop camera");
         mCamera.stop();
+    }
+
+    public interface BitMapInterface {
+
+        void gotBitMap(Bitmap bitmap);
     }
 }

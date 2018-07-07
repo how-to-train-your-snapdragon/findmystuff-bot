@@ -1,20 +1,30 @@
 package com.mobilehack.findmystuff;
 
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.media.Image;
 import android.support.annotation.Nullable;
+import android.support.v7.app.AppCompatActivity;
 import android.util.ArrayMap;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.View;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
+
+import github.nisrulz.screenshott.ScreenShott;
+import io.fotoapparat.Fotoapparat;
+import io.fotoapparat.result.BitmapPhoto;
+import io.fotoapparat.result.PendingResult;
+import io.fotoapparat.result.WhenDoneListener;
 
 public class OverlayRenderer extends View {
 
@@ -28,7 +38,16 @@ public class OverlayRenderer extends View {
     private float mBoxScoreThreshold = 0.4f;
     private String searchLabel ;
 
+    private ImageView screenshotView;
+    AppCompatActivity context;
+    Fotoapparat fotoapparat;
 
+
+//    public void setScreenshotView(AppCompatActivity appCompatActivity, ImageView screenshotView, Fotoapparat fotoapparat) {
+//        this.screenshotView = screenshotView;
+//        this.context = appCompatActivity;
+//        this.fotoapparat = fotoapparat;
+//    }
 
     private TextView statusView;
 
@@ -135,12 +154,6 @@ public class OverlayRenderer extends View {
             //textLabel += ", " + box.type_score;
             canvas.drawText(textLabel, bl + 10, bt + 30, mTextPaint);
 
-            if(searchLabel != null && searchLabel.toLowerCase().contains(textLabel.toLowerCase())){
-                Log.d("TEST", searchLabel);
-                Toast.makeText(this.getContext(), searchLabel + " found", Toast.LENGTH_SHORT).show();
-                //statusView.setText(searchLabel + " Found");
-                searchLabel = null;
-            }
 
             // draw the box
             mOutlinePaint.setColor(colorForIndex(box.type_id));

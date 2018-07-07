@@ -44,5 +44,6 @@ dependencies {
     // easy camera library
     implementation 'io.fotoapparat.fotoapparat:library:2.3.1'
     implementation 'pub.devrel:easypermissions:1.2.0'
+    implementation 'com.github.nisrulz:screenshott:2.0.0'
 
 }

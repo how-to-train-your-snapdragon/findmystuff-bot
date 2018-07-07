@@ -33,14 +33,21 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
+    <android.widget.ImageView
+        android:id="@+id/screenshotview"
+        android:layout_width="150dp"
+        android:layout_height="150dp"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentLeft="true" />
+
 
     <android.widget.TextView
         android:id="@+id/statusText"
-        android:textColor="#FFFFFF"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
-        android:layout_centerInParent="true" />
+        android:layout_centerInParent="true"
+        android:textColor="#FFFFFF" />
 
     <android.widget.Button
         android:id="@+id/serverButton"

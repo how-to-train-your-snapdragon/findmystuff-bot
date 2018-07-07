@@ -5,14 +5,18 @@ import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.net.wifi.WifiManager;
+import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
-import android.view.View;
+import android.util.Base64;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.androidnetworking.AndroidNetworking;
@@ -22,27 +26,24 @@ import com.androidnetworking.interfaces.JSONObjectRequestListener;
 import com.mobilehack.findmystuff.helpers.CameraPreviewHelper;
 import com.mobilehack.findmystuff.helpers.NV21ConversionHelper;
 import com.mobilehack.findmystuff.helpers.SNPEHelper;
-import com.mobilehack.findmystuff.Box;
 
 import io.fotoapparat.parameter.Resolution;
 import io.fotoapparat.preview.Frame;
 
-import org.json.JSONException;
-import org.json.JSONObject;
-
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Locale;
 
 import android.arch.lifecycle.Lifecycle;
-import android.graphics.Bitmap;
-import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Matrix;
-import android.graphics.Paint;
+import android.widget.Toast;
 
 
-import io.fotoapparat.view.CameraView;
+import org.json.JSONObject;
+
 import okhttp3.OkHttpClient;
 import pub.devrel.easypermissions.AfterPermissionGranted;
 import pub.devrel.easypermissions.EasyPermissions;
@@ -66,6 +67,9 @@ public class MainActivity extends AppCompatActivity {
     private Bitmap mModelInputBitmap;
     private Canvas mModelInputCanvas;
     private Paint mModelBitmapPaint;
+    ImageView screenShotView;
+    String searchLabel;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -85,12 +89,14 @@ public class MainActivity extends AppCompatActivity {
         final Button sendButton = (Button) findViewById(R.id.sendButton);
         final TextView statusTextView = (TextView) findViewById(R.id.statusText);
         final Button serverButton = (Button) findViewById(R.id.serverButton);
+        screenShotView = findViewById(R.id.screenshotview);
 
         mOverlayRenderer.setStatusView(statusTextView);
+        //mOverlayRenderer.setScreenshotView(this, screenShotView, fotoapparat);
 
         statusTextView.setText(R.string.readyMessage_txt);
 
-        if(!androidWebServer.isAlive()) {
+        if (!androidWebServer.isAlive()) {
 
             try {
                 androidWebServer.start();
@@ -108,10 +114,9 @@ public class MainActivity extends AppCompatActivity {
         androidWebServer.setAndroidServerInterface(new AndroidWebServer.AndroidServerInterface() {
             @Override
             public void gotMessage(String message) {
-                mOverlayRenderer.setSearchLabel(message);
+                searchLabel = message;
             }
         });
-
 
 
 //        serverButton.setOnClickListener(new View.OnClickListener() {
@@ -234,7 +239,6 @@ public class MainActivity extends AppCompatActivity {
             mNV21PreviewBitmap = mNV21ConversionHelper.convert(frame.getImage(), frame.getSize().width, frame.getSize().height);
 
 
-
             final int inputWidth = mSnpeHelper.getInputTensorWidth();
             final int inputHeight = mSnpeHelper.getInputTensorHeight();
             // allocate the object only on the first time
@@ -280,6 +284,133 @@ public class MainActivity extends AppCompatActivity {
             // [2-45ms] give the bitmap to SNPE for inference
 
             mInferenceSkipped = boxes == null;
+
+            if (!mInferenceSkipped) {
+
+
+                HashSet<String> nearStringsSet = new HashSet<>();
+
+                for (Box box : boxes) {
+
+                    String textLabel = (box.type_name != null && !box.type_name.isEmpty()) ? box.type_name : String.valueOf(box.type_id + 2);
+                    nearStringsSet.add(textLabel);
+
+                    if (searchLabel != null && searchLabel.toLowerCase().contains(textLabel.toLowerCase())) {
+
+                        String nearObjects = "";
+
+                        int count = 0;
+
+                        for (String word : nearStringsSet) {
+
+                            if (!searchLabel.contains(word) && count <= 2) {
+                                nearObjects += word + ", ";
+
+                            }
+
+                            count++;
+                        }
+
+                        Log.d("TEST", searchLabel);
+                        String searchLabelFinal = searchLabel;
+                        String nearObjectsFinal = nearObjects;
+
+                        searchLabel = null;
+
+                        MainActivity.this.runOnUiThread(new Runnable() {
+                            public void run() {
+
+                                Toast.makeText(MainActivity.this, searchLabelFinal + " found", Toast.LENGTH_SHORT).show();
+
+
+                                final Handler handler = new Handler();
+                                handler.postDelayed(new Runnable() {
+                                    @Override
+                                    public void run() {
+
+
+                                        AsyncTask.execute(new Runnable() {
+                                            @Override
+                                            public void run() {
+
+//                                                        ByteArrayOutputStream baos=new  ByteArrayOutputStream();
+//                                                        bitmap.compress(Bitmap.CompressFormat.JPEG,50, baos);
+//                                                        byte [] b=baos.toByteArray();
+//                                                        String temp=Base64.encodeToString(b, Base64.DEFAULT);
+
+                                                AndroidNetworking.post(sendIP)
+                                                        .addQueryParameter("image", searchLabelFinal + " found near " + nearObjectsFinal)
+                                                        .setTag("test")
+                                                        .setPriority(Priority.MEDIUM)
+                                                        .build()
+                                                        .getAsJSONObject(new JSONObjectRequestListener() {
+                                                            @Override
+                                                            public void onResponse(JSONObject response) {
+
+
+                                                            }
+
+                                                            @Override
+                                                            public void onError(ANError error) {
+
+
+                                                                error.printStackTrace();
+                                                            }
+                                                        });
+                                            }
+                                        });
+//
+//                                        mCameraPreviewHelper.setBitMap(screenShotView, new CameraPreviewHelper.BitMapInterface() {
+//                                            @Override
+//                                            public void gotBitMap(Bitmap bitmap) {
+//
+//
+//                                                AsyncTask.execute(new Runnable() {
+//                                                    @Override
+//                                                    public void run() {
+//
+////                                                        ByteArrayOutputStream baos=new  ByteArrayOutputStream();
+////                                                        bitmap.compress(Bitmap.CompressFormat.JPEG,50, baos);
+////                                                        byte [] b=baos.toByteArray();
+////                                                        String temp=Base64.encodeToString(b, Base64.DEFAULT);
+//
+//                                                        AndroidNetworking.post(sendIP)
+//                                                                .addQueryParameter("image", searchLabelFinal + " found near " + nearObjectsFinal)
+//                                                                .setTag("test")
+//                                                                .setPriority(Priority.MEDIUM)
+//                                                                .build()
+//                                                                .getAsJSONObject(new JSONObjectRequestListener() {
+//                                                                    @Override
+//                                                                    public void onResponse(JSONObject response) {
+//
+//
+//                                                                    }
+//
+//                                                                    @Override
+//                                                                    public void onError(ANError error) {
+//
+//
+//                                                                        error.printStackTrace();
+//                                                                    }
+//                                                                });
+//                                                    }
+//                                                });
+//
+//
+//                                            }
+//                                        });
+
+
+                                    }
+                                }, 1000);
+
+                            }
+                        });
+                        break;
+
+                    }
+                }
+            }
 
 
             // deep copy the results so we can draw the current set while guessing the next set
