@@ -20,10 +20,26 @@
 
     </android.support.design.widget.AppBarLayout>
 
+    <io.fotoapparat.view.CameraView
+        android:id="@+id/camera_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="?attr/colorPrimary">
+
+    </io.fotoapparat.view.CameraView>
+
+    <com.mobilehack.findmystuff.OverlayRenderer
+        android:id="@+id/overlayRenderer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+
     <android.widget.TextView
         android:id="@+id/statusText"
+        android:textColor="#FFFFFF"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
         android:layout_centerInParent="true" />
 
     <android.widget.Button
@@ -32,7 +48,8 @@
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
         android:layout_alignParentEnd="true"
-        android:text="@string/start_server_txt" />
+        android:text="@string/start_server_txt"
+        android:visibility="gone" />
 
     <android.widget.Button
         android:id="@+id/sendButton"
@@ -40,7 +57,8 @@
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
         android:layout_alignParentStart="true"
-        android:text="@string/send_txt" />
+        android:text="@string/send_txt"
+        android:visibility="gone" />
 
 
 </RelativeLayout>

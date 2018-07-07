@@ -16,11 +16,19 @@ import fi.iki.elonen.NanoHTTPD;
 public class AndroidWebServer extends NanoHTTPD {
 
     AppCompatActivity context;
+    AndroidServerInterface androidServerInterface;
+
 
     public AndroidWebServer(AppCompatActivity context, int port) {
         super(port);
         this.context = context;
     }
+
+
+    public void setAndroidServerInterface(AndroidServerInterface androidServerInterface) {
+        this.androidServerInterface = androidServerInterface;
+    }
+
 
     public AndroidWebServer(String hostname, int port) {
         super(hostname, port);
@@ -50,15 +58,21 @@ public class AndroidWebServer extends NanoHTTPD {
             e.printStackTrace();
         }
 
-        final String finalMessasge = "Got message:" + msg;
+        final String finalMessasge = msg;
 
         context.runOnUiThread(new Runnable() {
             public void run() {
                 Toast.makeText(context, finalMessasge, Toast.LENGTH_SHORT).show();
+                androidServerInterface.gotMessage(finalMessasge);
             }
         });
 
         return newFixedLengthResponse(Response.Status.OK, "text/json",jsonObj.toString());
+    }
+
+    interface AndroidServerInterface{
+
+        public void gotMessage(String message);
     }
 
 

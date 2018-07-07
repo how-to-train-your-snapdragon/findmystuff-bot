@@ -1,7 +1,12 @@
 package com.mobilehack.findmystuff;
 
+import android.Manifest;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Paint;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.View;
@@ -14,14 +19,33 @@ import com.androidnetworking.AndroidNetworking;
 import com.androidnetworking.common.Priority;
 import com.androidnetworking.error.ANError;
 import com.androidnetworking.interfaces.JSONObjectRequestListener;
+import com.mobilehack.findmystuff.helpers.CameraPreviewHelper;
+import com.mobilehack.findmystuff.helpers.NV21ConversionHelper;
+import com.mobilehack.findmystuff.helpers.SNPEHelper;
+import com.mobilehack.findmystuff.Box;
+
+import io.fotoapparat.parameter.Resolution;
+import io.fotoapparat.preview.Frame;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Locale;
 
+import android.arch.lifecycle.Lifecycle;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Matrix;
+import android.graphics.Paint;
+
+
+import io.fotoapparat.view.CameraView;
 import okhttp3.OkHttpClient;
+import pub.devrel.easypermissions.AfterPermissionGranted;
+import pub.devrel.easypermissions.EasyPermissions;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -30,10 +54,26 @@ public class MainActivity extends AppCompatActivity {
 
     int port = 8000;
 
+    private SNPEHelper mSnpeHelper;
+    private CameraPreviewHelper mCameraPreviewHelper;
+    private NV21ConversionHelper mNV21ConversionHelper;
+
+    private OverlayRenderer mOverlayRenderer;
+    private boolean mNetworkLoaded;
+    private int mNV21FrameRotation;
+    private boolean mInferenceSkipped;
+    private Bitmap mNV21PreviewBitmap;
+    private Bitmap mModelInputBitmap;
+    private Canvas mModelInputCanvas;
+    private Paint mModelBitmapPaint;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        mOverlayRenderer = findViewById(R.id.overlayRenderer);
+
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
@@ -46,94 +86,213 @@ public class MainActivity extends AppCompatActivity {
         final TextView statusTextView = (TextView) findViewById(R.id.statusText);
         final Button serverButton = (Button) findViewById(R.id.serverButton);
 
+        mOverlayRenderer.setStatusView(statusTextView);
+
         statusTextView.setText(R.string.readyMessage_txt);
 
-        serverButton.setOnClickListener(new View.OnClickListener() {
+        if(!androidWebServer.isAlive()) {
+
+            try {
+                androidWebServer.start();
+                serverButton.setText(getText(R.string.stop_server_txt));
+                statusTextView.setText(getString(R.string.serverListenTxt) + getIpAccess() + port);
+
+            } catch (IOException e) {
+                e.printStackTrace();
+                statusTextView.setText(e.getMessage());
+                //textView.setText(R.string.serverNotRunning_txt);
+
+            }
+        }
+
+        androidWebServer.setAndroidServerInterface(new AndroidWebServer.AndroidServerInterface() {
             @Override
-            public void onClick(View view) {
+            public void gotMessage(String message) {
+                mOverlayRenderer.setSearchLabel(message);
+            }
+        });
 
-                if(!androidWebServer.isAlive()) {
 
-                    try {
-                        androidWebServer.start();
-                        serverButton.setText(getText(R.string.stop_server_txt));
-                        statusTextView.setText(getString(R.string.serverListenTxt) + getIpAccess() + port);
 
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                        statusTextView.setText(e.getMessage());
-                        //textView.setText(R.string.serverNotRunning_txt);
+//        serverButton.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View view) {
+//
+//                if(!androidWebServer.isAlive()) {
+//
+//                    try {
+//                        androidWebServer.start();
+//                        serverButton.setText(getText(R.string.stop_server_txt));
+//                        statusTextView.setText(getString(R.string.serverListenTxt) + getIpAccess() + port);
+//
+//                    } catch (IOException e) {
+//                        e.printStackTrace();
+//                        statusTextView.setText(e.getMessage());
+//                        //textView.setText(R.string.serverNotRunning_txt);
+//
+//                    }
+//                }else{
+//                    androidWebServer.stop();
+//                    statusTextView.setText(R.string.serverNotRunning_txt);
+//                    serverButton.setText(getText(R.string.start_server_txt));
+//                }
+//
+//            }
+//        });
 
-                    }
-                }else{
-                    androidWebServer.stop();
-                    statusTextView.setText(R.string.serverNotRunning_txt);
-                    serverButton.setText(getText(R.string.start_server_txt));
+
+//        sendButton.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View view) {
+//
+//                AndroidNetworking.post(sendIP)
+//                        .addQueryParameter("message", "You shoes are in the closet")
+//                        .setTag("test")
+//                        .setPriority(Priority.MEDIUM)
+//                        .build()
+//                        .getAsJSONObject(new JSONObjectRequestListener() {
+//                            @Override
+//                            public void onResponse(JSONObject response) {
+//                                // do anything with response
+//                                try {
+//                                    statusTextView.setText("got response:" + response.getString("message"));
+//                                } catch (JSONException e) {
+//                                    e.printStackTrace();
+//                                }
+//                            }
+//
+//                            @Override
+//                            public void onError(ANError error) {
+//                                // handle error
+//
+//                                statusTextView.setText(error.getErrorDetail());
+//                                error.printStackTrace();
+//                            }
+//                        });
+//            }
+//
+//
+//        });
+
+
+    }
+
+    // this function makes sure we load the network the first time it's required - we could do it
+    // in the onCreate, but this will block the first paint of the UI, leaving a gray box
+    private void ensureNetCreated() {
+        if (mSnpeHelper == null) {
+
+            // load the neural network for object detection with SNPE
+            mSnpeHelper = new SNPEHelper(getApplication());
+            mNetworkLoaded = mSnpeHelper.loadMobileNetSSDFromAssets();
+
+
+        }
+    }
+
+    private final CameraPreviewHelper.Callbacks mCameraPreviewCallbacks = new CameraPreviewHelper.Callbacks() {
+        @Override
+        public Resolution selectPreviewResolution(Iterable<Resolution> resolutions) {
+            // defer net creation to this moment, so the UI has time to be flushed
+            ensureNetCreated();
+
+            // This function selects the resolution (amongst the set of possible 'preview'
+            // resolutions) which is closest to the input resolution of the model (but not smaller)
+            final int fallbackSize = 300; // if the input is not reliable, just assume some size;
+            final int targetWidth = mNetworkLoaded ? mSnpeHelper.getInputTensorWidth() : fallbackSize;
+            final int targetHeight = mNetworkLoaded ? mSnpeHelper.getInputTensorHeight() : fallbackSize;
+            io.fotoapparat.parameter.Resolution preferred = null;
+            double preferredScore = 0;
+            for (Resolution resolution : resolutions) {
+                if (resolution.width < targetWidth || resolution.height < targetHeight)
+                    continue;
+                double score = Math.pow(targetWidth - resolution.width, 2) + Math.pow(targetHeight - resolution.height, 2);
+                if (preferred == null || score < preferredScore) {
+                    preferred = resolution;
+                    preferredScore = score;
                 }
-
             }
-        });
+            return preferred;
+        }
+
+        @Override
+        public void onCameraPreviewFrame(Frame frame) {
+            // NOTE: This is executed on a different thread - don't update UI from this!
+            // NOTE: frame.image in NV21 format (1.5 bytes per pixel) - often rotated (e.g. 270),
+            // different frame.size.width (ex. 1600) and frame.size.height (ex. 1200) than the model
+            // input.
+
+            // skip processing if the neural net is not loaded - nothing to do with this Frame
+            if (!mNetworkLoaded)
+                return;
+            // skip processing if the app is paused or stopped (one frame may still be pending)
+            if (!getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.STARTED))
+                return;
 
 
-        sendButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-
-                AndroidNetworking.post(sendIP)
-                        .addQueryParameter("message", "You shoes are in the closet")
-                        .setTag("test")
-                        .setPriority(Priority.MEDIUM)
-                        .build()
-                        .getAsJSONObject(new JSONObjectRequestListener() {
-                            @Override
-                            public void onResponse(JSONObject response) {
-                                // do anything with response
-                                try {
-                                    statusTextView.setText("got response:" + response.getString("message"));
-                                } catch (JSONException e) {
-                                    e.printStackTrace();
-                                }
-                            }
-
-                            @Override
-                            public void onError(ANError error) {
-                                // handle error
-
-                                statusTextView.setText(error.getErrorDetail());
-                                error.printStackTrace();
-                            }
-                        });
-            }
+            mNV21FrameRotation = frame.getRotation();
+            mNV21PreviewBitmap = mNV21ConversionHelper.convert(frame.getImage(), frame.getSize().width, frame.getSize().height);
 
 
-        });
 
+            final int inputWidth = mSnpeHelper.getInputTensorWidth();
+            final int inputHeight = mSnpeHelper.getInputTensorHeight();
+            // allocate the object only on the first time
+            if (mModelInputBitmap == null || mModelInputBitmap.getWidth() != inputWidth || mModelInputBitmap.getHeight() != inputHeight) {
+                // create ARGB8888 bitmap and canvas, with the right size
+                mModelInputBitmap = Bitmap.createBitmap(inputWidth, inputHeight, Bitmap.Config.ARGB_8888);
+                mModelInputCanvas = new Canvas(mModelInputBitmap);
 
-        serverButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-
-                if (!androidWebServer.isAlive()) {
-
-                    try {
-                        androidWebServer.start();
-                        serverButton.setText(getText(R.string.stop_server_txt));
-                        statusTextView.setText(getString(R.string.serverListenTxt) + getIpAccess() + port);
-
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                        statusTextView.setText(e.getMessage());
-                        //textView.setText(R.string.serverNotRunning_txt);
-
-                    }
-                } else {
-                    androidWebServer.stop();
-                    statusTextView.setText(R.string.serverNotRunning_txt);
-                    serverButton.setText(getText(R.string.start_server_txt));
+                // compute the roto-scaling matrix (preview image -> screen image) and apply it to
+                // the canvas. this includes translation for 'letterboxing', i.e. the image will
+                // have black bands to the left and right if it's a portrait picture
+                final Matrix mtx = new Matrix();
+                final int previewWidth = mNV21PreviewBitmap.getWidth();
+                final int previewHeight = mNV21PreviewBitmap.getHeight();
+                final float scaleWidth = ((float) inputWidth) / previewWidth;
+                final float scaleHeight = ((float) inputHeight) / previewHeight;
+                final float frameScale = Math.min(scaleWidth, scaleHeight); // centerInside
+                //final float frameScale = Math.max(scaleWidth, scaleHeight); // centerCrop
+                final float dx = inputWidth - (previewWidth * frameScale);
+                final float dy = inputHeight - (previewHeight * frameScale);
+                mtx.postScale(frameScale, frameScale);
+                mtx.postTranslate(dx / 2, dy / 2);
+                if (frame.getRotation() != 0) {
+                    mtx.postTranslate(-inputWidth / 2, -inputHeight / 2);
+                    mtx.postRotate(-frame.getRotation());
+                    mtx.postTranslate(inputWidth / 2, inputHeight / 2);
                 }
+                mModelInputCanvas.setMatrix(mtx);
+
+                // create the "Paint", to set the antialiasing option
+                mModelBitmapPaint = new Paint();
+                mModelBitmapPaint.setFilterBitmap(true);
+
+                // happens only the first time
 
             }
-        });
+            mModelInputCanvas.drawColor(Color.BLACK);
+            mModelInputCanvas.drawBitmap(mNV21PreviewBitmap, 0, 0, mModelBitmapPaint);
+
+            final ArrayList<Box> boxes = mSnpeHelper.mobileNetSSDInference(mModelInputBitmap);
+
+
+            // [2-45ms] give the bitmap to SNPE for inference
+
+            mInferenceSkipped = boxes == null;
+
+
+            // deep copy the results so we can draw the current set while guessing the next set
+            mOverlayRenderer.setBoxesFromAnotherThread(boxes);
+
+
+        }
+    };
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        createCameraPreviewHelper();
     }
 
     private String getIpAccess() {
@@ -142,6 +301,28 @@ public class MainActivity extends AppCompatActivity {
         int ipAddress = wifiManager.getConnectionInfo().getIpAddress();
         final String formatedIpAddress = String.format(Locale.ENGLISH, "%d.%d.%d.%d", (ipAddress & 0xff), (ipAddress >> 8 & 0xff), (ipAddress >> 16 & 0xff), (ipAddress >> 24 & 0xff));
         return "http://" + formatedIpAddress + ":";
+    }
+
+    @AfterPermissionGranted(0x123)
+    private void createCameraPreviewHelper() {
+        // ensure we have Camera permissions before proceeding
+        final String[] requiredPerms = {Manifest.permission.CAMERA};
+        if (EasyPermissions.hasPermissions(this, requiredPerms)) {
+            // create the camera helper and nv21 conversion helpers here
+            if (mCameraPreviewHelper == null) {
+                mNV21ConversionHelper = new NV21ConversionHelper(this);
+                mCameraPreviewHelper = new CameraPreviewHelper(this, findViewById(R.id.camera_view), mCameraPreviewCallbacks, true);
+                getLifecycle().addObserver(mCameraPreviewHelper);
+            }
+        } else
+            EasyPermissions.requestPermissions(this, "Please surrender the Camera",
+                    0x123, requiredPerms);
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        EasyPermissions.onRequestPermissionsResult(requestCode, permissions, grantResults, this);
     }
 
 

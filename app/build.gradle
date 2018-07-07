@@ -16,6 +16,15 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+}
+
+repositories {
+    maven { url 'https://jitpack.io' }
 }
 
 dependencies {
@@ -30,5 +39,10 @@ dependencies {
     implementation 'org.nanohttpd:nanohttpd:2.3.1'
     implementation 'com.amitshekhar.android:android-networking:1.0.1'
     implementation 'com.squareup.okhttp3:okhttp:3.10.0'
+    // SNPE 32 & 64-bit LLVM Android Library (AAR)
+    implementation files('src/main/libs/snpe-release.aar')
+    // easy camera library
+    implementation 'io.fotoapparat.fotoapparat:library:2.3.1'
+    implementation 'pub.devrel:easypermissions:1.2.0'
 
 }
