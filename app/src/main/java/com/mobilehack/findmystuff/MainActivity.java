@@ -1,6 +1,7 @@
 package com.mobilehack.findmystuff;
 
 import android.Manifest;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Paint;
@@ -8,6 +9,7 @@ import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
+import android.speech.RecognizerIntent;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
@@ -70,6 +72,8 @@ public class MainActivity extends AppCompatActivity {
     ImageView screenShotView;
     String searchLabel;
 
+    BlueToothManager blueToothManager = null;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -96,6 +100,8 @@ public class MainActivity extends AppCompatActivity {
 
         statusTextView.setText(R.string.readyMessage_txt);
 
+        blueToothManager = new BlueToothManager(this);
+
         if (!androidWebServer.isAlive()) {
 
             try {
@@ -115,6 +121,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void gotMessage(String message) {
                 searchLabel = message;
+                blueToothManager.sendMessage("1");
             }
         });
 
@@ -297,6 +304,7 @@ public class MainActivity extends AppCompatActivity {
 
                     if (searchLabel != null && searchLabel.toLowerCase().contains(textLabel.toLowerCase())) {
 
+
                         String nearObjects = "";
 
                         int count = 0;
@@ -339,7 +347,7 @@ public class MainActivity extends AppCompatActivity {
 //                                                        String temp=Base64.encodeToString(b, Base64.DEFAULT);
 
                                                 AndroidNetworking.post(sendIP)
-                                                        .addQueryParameter("image", searchLabelFinal + " found near " + nearObjectsFinal)
+                                                        .addQueryParameter("image", searchLabelFinal + " found")
                                                         .setTag("test")
                                                         .setPriority(Priority.MEDIUM)
                                                         .build()
@@ -357,6 +365,8 @@ public class MainActivity extends AppCompatActivity {
                                                                 error.printStackTrace();
                                                             }
                                                         });
+
+                                                blueToothManager.sendMessage("0");
                                             }
                                         });
 //
@@ -419,6 +429,8 @@ public class MainActivity extends AppCompatActivity {
 
         }
     };
+
+
 
     @Override
     protected void onStart() {
