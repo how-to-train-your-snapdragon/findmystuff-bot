@@ -22,6 +22,13 @@ import java.util.Set;
 import java.util.UUID;
 
 
+/**
+ * Bluetooth manager to communicate with the bot
+ * @author Thomas Binu
+ * @author Anitha Ramaswamy
+ * @author Ashuthosh Giri
+ */
+
 public class BlueToothManager {
 
     private BluetoothAdapter mBTAdapter;
