@@ -13,6 +13,12 @@ import java.util.Map;
 
 import fi.iki.elonen.NanoHTTPD;
 
+/**
+ * Server class to communicate with the client
+ * @author Thomas Binu
+ * @author Anitha Ramaswamy
+ * @author Ashuthosh Giri
+ */
 public class AndroidWebServer extends NanoHTTPD {
 
     AppCompatActivity context;

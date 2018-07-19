@@ -50,10 +50,17 @@ import okhttp3.OkHttpClient;
 import pub.devrel.easypermissions.AfterPermissionGranted;
 import pub.devrel.easypermissions.EasyPermissions;
 
+
+/**
+ * Main Camera screen of the bot application
+ * @author Thomas Binu
+ * @author Anitha Ramaswamy
+ * @author Ashuthosh Giri
+ */
 public class MainActivity extends AppCompatActivity {
 
 
-    String sendIP = "http://10.73.92.214:8000";
+    String sendIP = "http://10.73.240.58:8000";
 
     int port = 8000;
 
@@ -124,67 +131,6 @@ public class MainActivity extends AppCompatActivity {
                 blueToothManager.sendMessage("1");
             }
         });
-
-
-//        serverButton.setOnClickListener(new View.OnClickListener() {
-//            @Override
-//            public void onClick(View view) {
-//
-//                if(!androidWebServer.isAlive()) {
-//
-//                    try {
-//                        androidWebServer.start();
-//                        serverButton.setText(getText(R.string.stop_server_txt));
-//                        statusTextView.setText(getString(R.string.serverListenTxt) + getIpAccess() + port);
-//
-//                    } catch (IOException e) {
-//                        e.printStackTrace();
-//                        statusTextView.setText(e.getMessage());
-//                        //textView.setText(R.string.serverNotRunning_txt);
-//
-//                    }
-//                }else{
-//                    androidWebServer.stop();
-//                    statusTextView.setText(R.string.serverNotRunning_txt);
-//                    serverButton.setText(getText(R.string.start_server_txt));
-//                }
-//
-//            }
-//        });
-
-
-//        sendButton.setOnClickListener(new View.OnClickListener() {
-//            @Override
-//            public void onClick(View view) {
-//
-//                AndroidNetworking.post(sendIP)
-//                        .addQueryParameter("message", "You shoes are in the closet")
-//                        .setTag("test")
-//                        .setPriority(Priority.MEDIUM)
-//                        .build()
-//                        .getAsJSONObject(new JSONObjectRequestListener() {
-//                            @Override
-//                            public void onResponse(JSONObject response) {
-//                                // do anything with response
-//                                try {
-//                                    statusTextView.setText("got response:" + response.getString("message"));
-//                                } catch (JSONException e) {
-//                                    e.printStackTrace();
-//                                }
-//                            }
-//
-//                            @Override
-//                            public void onError(ANError error) {
-//                                // handle error
-//
-//                                statusTextView.setText(error.getErrorDetail());
-//                                error.printStackTrace();
-//                            }
-//                        });
-//            }
-//
-//
-//        });
 
 
     }
@@ -299,10 +245,18 @@ public class MainActivity extends AppCompatActivity {
 
                 for (Box box : boxes) {
 
+
                     String textLabel = (box.type_name != null && !box.type_name.isEmpty()) ? box.type_name : String.valueOf(box.type_id + 2);
+
+                    if (box.type_score < 0.7)
+                        continue;
+
                     nearStringsSet.add(textLabel);
 
-                    if (searchLabel != null && searchLabel.toLowerCase().contains(textLabel.toLowerCase())) {
+                    Log.d("objects", textLabel);
+
+
+                    if (searchLabel != null && textLabel.toLowerCase().contains(searchLabel.toLowerCase())) {
 
 
                         String nearObjects = "";
@@ -429,7 +383,6 @@ public class MainActivity extends AppCompatActivity {
 
         }
     };
-
 
 
     @Override

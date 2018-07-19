@@ -1,31 +1,30 @@
 package com.mobilehack.findmystuff;
 
 import android.content.Context;
-import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
-import android.media.Image;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.util.ArrayMap;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
 
-import github.nisrulz.screenshott.ScreenShott;
 import io.fotoapparat.Fotoapparat;
-import io.fotoapparat.result.BitmapPhoto;
-import io.fotoapparat.result.PendingResult;
-import io.fotoapparat.result.WhenDoneListener;
 
+
+/**
+ * Renderer for the image detection box
+ * @author Thomas Binu
+ * @author Anitha Ramaswamy
+ * @author Ashuthosh Giri
+ */
 public class OverlayRenderer extends View {
 
     private ReentrantLock mLock = new ReentrantLock();
@@ -36,7 +35,7 @@ public class OverlayRenderer extends View {
     private Paint mCenterPaint = new Paint();
     private Paint mTextPaint = new Paint();
     private float mBoxScoreThreshold = 0.4f;
-    private String searchLabel ;
+    private String searchLabel;
 
     private ImageView screenshotView;
     AppCompatActivity context;
@@ -82,7 +81,7 @@ public class OverlayRenderer extends View {
         return mBoxScoreThreshold;
     }
 
-    public void setSearchLabel(String searchLabel){
+    public void setSearchLabel(String searchLabel) {
         this.searchLabel = searchLabel;
     }
 
